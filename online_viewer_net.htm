@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تحدي التاريخ - المطور ياسر العنزي</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f4f7f6; --card: #ffffff; --primary: #4361ee;
+            --text: #2b2d42; --success: #2ecc71; --danger: #e74c3c;
+        }
+        .dark-mode {
+            --bg: #1a1a2e; --card: #16213e; --text: #ffffff; --primary: #4cc9f0;
+        }
+        
+        body {
+            font-family: 'Cairo', sans-serif; background-color: var(--bg);
+            margin: 0; display: flex; justify-content: center; align-items: center;
+            height: 100vh; transition: 0.4s; overflow: hidden;
+        }
+
+        /* زر الإضاءة */
+        .theme-btn {
+            position: absolute; top: 20px; left: 20px;
+            background: var(--card); border: 2px solid var(--primary);
+            width: 50px; height: 50px; border-radius: 50%; cursor: pointer;
+            font-size: 22px; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 100;
+        }
+
+        .container {
+            width: 90%; max-width: 450px; background: var(--card);
+            padding: 40px 25px; border-radius: 30px; box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+            border: 5px solid var(--primary); text-align: center;
+            position: relative; animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+
+        /* توسيط الاسم */
+        .start-section { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .name-input {
+            width: 100%; padding: 15px; margin: 25px 0; border-radius: 15px;
+            border: 2px solid #ddd; text-align: center; font-family: 'Cairo';
+            font-size: 20px; font-weight: bold; outline: none;
+        }
+
+        .info-header {
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;
+            background: rgba(0,0,0,0.05); padding: 12px; border-radius: 15px; margin-bottom: 20px;
+        }
+        .info-box { font-size: 14px; font-weight: bold; }
+        .info-num { display: block; font-size: 20px; color: var(--primary); }
+
+        #alert-msg {
+            height: 45px; margin-bottom: 15px; border-radius: 12px;
+            display: flex; justify-content: center; align-items: center;
+            font-weight: 900; font-size: 18px; color: white; transition: 0.3s;
+        }
+
+        .question { font-size: 22px; font-weight: 700; margin-bottom: 20px; color: var(--text); }
+        .options { display: grid; gap: 12px; }
+        
+        .btn-opt {
+            background: white; border: 2px solid #ddd; padding: 14px;
+            border-radius: 15px; font-family: 'Cairo'; font-size: 17px;
+            font-weight: bold; cursor: pointer; transition: 0.2s; color: #333;
+        }
+        .correct { background: var(--success) !important; color: white !important; border-color: var(--success); }
+        .wrong { background: var(--danger) !important; color: white !important; border-color: var(--danger); }
+
+        .btn-go {
+            background: var(--primary); color: white; border: none;
+            padding: 18px; width: 100%; border-radius: 15px;
+            font-weight: 900; font-size: 20px; cursor: pointer;
+        }
+        .hidden { display: none; }
+        footer { margin-top: 25px; font-size: 12px; font-weight: bold; color: #888; }
+    </style>
+</head>
+<body>
+
+<button class="theme-btn" onclick="toggleMode()">🌓</button>
+
+<audio id="sound-win" src="https://www.myinstants.com/media/sounds/correct.mp3"></audio>
+<audio id="sound-fail" src="https://www.myinstants.com/media/sounds/wrong-answer-sound-effect.mp3"></audio>
+<audio id="sound-time" src="https://www.myinstants.com/media/sounds/buzzer_x.mp3"></audio>
+
+<div class="container" id="box">
+    <div id="scr-start" class="start-section">
+        <h1 style="color:var(--primary); margin:0;">🏆 تحدي التاريخ</h1>
+        <p style="font-weight: bold;">الصف الثاني المتوسط</p>
+        <input type="text" id="userName" class="name-input" placeholder="اكتب اسمك هنا يا بطل">
+        <button class="btn-go" onclick="startPlay()">ابدأ الآن 🚀</button>
+    </div>
+
+    <div id="scr-game" class="hidden">
+        <div class="info-header">
+            <div class="info-box">الوقت<span id="timer" class="info-num">20</span></div>
+            <div id="p-name" style="font-weight: 900; align-self: center;"></div>
+            <div class="info-box">الدرجة<span id="score" class="info-num">0</span></div>
+        </div>
+        
+        <div id="alert-msg"></div>
+        <div class="question" id="q-text"></div>
+        <div id="opt-grid" class="options"></div>
+    </div>
+
+    <div id="scr-end" class="hidden">
+        <h1 id="final-msg" style="font-size: 30px;"></h1>
+        <h2 id="final-score" style="color:var(--primary);"></h2>
+        <button class="btn-go" onclick="location.reload()">إعادة التحدي 🔄</button>
+    </div>
+
+    <footer>المطور: ياسر مفرح العنزي &copy; 2026</footer>
+</div>
+
+<script>
+const bank = [
+    {q: "مؤسس الدولة الأموية هو الخليفة:", o: ["معاوية بن أبي سفيان", "يزيد بن معاوية", "عبدالملك بن مروان", "عمر بن عبدالعزيز"], a: 0},
+    {q: "اتخذ الأمويون مدينة .... عاصمة لدولتهم:", o: ["دمشق", "بغداد", "الكوفة", "البصرة"], a: 0},
+    {q: "الخليفة الذي عرب الدواوين هو:", o: ["عبدالملك بن مروان", "سليمان بن عبدالملك", "الوليد بن عبدالملك", "معاوية بن أبي سفيان"], a: 0},
+    {q: "بنى الخليفة المعتصم مدينة:", o: ["سامراء", "بغداد", "القاهرة", "البصرة"], a: 0},
+    {q: "المضيق الذي يربط البحر المتوسط بالمحيط الأطلسي:", o: ["مضيق جبل طارق", "مضيق هرمز", "مضيق ملقا", "باب المندب"], a: 0},
+    {q: "سقطت الدولة العباسية على يد المغول عام:", o: ["656 هـ", "132 هـ", "41 هـ", "100 هـ"], a: 0},
+    {q: "أكبر دولة إسلامية من حيث المساحة هي:", o: ["كازاخستان", "السعودية", "مصر", "إندونيسيا"], a: 0},
+    {q: "أطول نهر في العالم الإسلامي هو:", o: ["نهر النيل", "نهر السند", "نهر دجلة", "نهر الفرات"], a: 0}
+];
+
+let current = 0, points = 0, clock = 20, timerRef, canTap = true, shuffled = [];
+
+function toggleMode() { document.body.classList.toggle('dark-mode'); }
+
+function startPlay() {
+    let name = document.getElementById('userName').value;
+    if(!name) return alert("أدخل اسمك!");
+    
+    document.getElementById('p-name').innerText = name;
+    document.getElementById('scr-start').classList.add('hidden');
+    document.getElementById('scr-game').classList.remove('hidden');
+    
+    shuffled = [...bank].sort(() => Math.random() - 0.5);
+    loadQuestion();
+}
+
+function loadQuestion() {
+    if(current >= shuffled.length) return endPlay();
+    canTap = true; clock = 20;
+    document.getElementById('timer').innerText = clock;
+    document.getElementById('alert-msg').innerText = "";
+    document.getElementById('alert-msg').style.background = "none";
+    
+    let qObj = shuffled[current];
+    document.getElementById('q-text').innerText = qObj.q;
+    let grid = document.getElementById('opt-grid');
+    grid.innerHTML = "";
+    
+    qObj.o.map((t, i) => ({t, ok: i === qObj.a})).sort(() => Math.random() - 0.5).forEach(o => {
+        let b = document.createElement('button');
+        b.className = "btn-opt";
+        b.innerText = o.t;
+        b.onclick = () => validate(b, o.ok);
+        grid.appendChild(b);
+    });
+
+    clearInterval(timerRef);
+    timerRef = setInterval(() => {
+        clock--;
+        document.getElementById('timer').innerText = clock;
+        if(clock <= 0) {
+            clearInterval(timerRef);
+            playSound('sound-time');
+            points = Math.max(0, points - 1);
+            showNotify("انتهى الوقت! ⏰", "var(--danger)");
+            setTimeout(() => { current++; loadQuestion(); }, 1500);
+        }
+    }, 1000);
+}
+
+function validate(btn, isOk) {
+    if(!canTap) return;
+    canTap = false;
+    clearInterval(timerRef);
+    if(isOk) {
+        playSound('sound-win');
+        btn.classList.add('correct');
+        points++;
+        showNotify("ممتاز! إجابة صحيحة ✅", "var(--success)");
+    } else {
+        playSound('sound-fail');
+        btn.classList.add('wrong');
+        points = Math.max(0, points - 1);
+        showNotify("للأسف، إجابة خاطئة ❌", "var(--danger)");
+    }
+    setTimeout(() => { current++; loadQuestion(); }, 1200);
+}
+
+function playSound(id) {
+    let s = document.getElementById(id);
+    s.currentTime = 0;
+    s.play().catch(() => {});
+}
+
+function showNotify(m, c) {
+    let a = document.getElementById('alert-msg');
+    a.innerText = m; a.style.background = c;
+    document.getElementById('score').innerText = points;
+}
+
+function endPlay() {
+    document.getElementById('scr-game').classList.add('hidden');
+    document.getElementById('scr-end').classList.remove('hidden');
+    document.getElementById('final-msg').innerText = points >= 5 ? "أحسنت يا بطل! 👑" : "حاول مجدداً 💪";
+    document.getElementById('final-score').innerText = "نتيجتك: " + points + " من " + shuffled.length;
+}
+</script>
+</body>
+</html>
